@@ -17,7 +17,7 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
-from .query_integral_image import query_integral_image
+from query_integral_image import query_integral_image
 
 item1 = itemgetter(1)
 
@@ -327,8 +327,9 @@ class WordCloud(object):
         d = {}
         flags = (re.UNICODE if sys.version < '3' and type(text) is unicode
                  else 0)
+        min_word_length = 3
         for word in re.findall(r"\w[\w']*", text, flags=flags):
-            if word.isdigit():
+            if word.isdigit() or len(word) < min_word_length:
                 continue
 
             word_lower = word.lower()
@@ -352,14 +353,25 @@ class WordCloud(object):
             d3[first] = sum(d2.values())
 
         # merge plurals into the singular count (simple cases only)
+        def _merge_keys(kept_key, merged_key):
+            d3[kept_key] += d3[merged_key]
+            del d3[merged_key]
+
+        min_root_length = 3
         for key in list(d3.keys()):
-            if key.endswith('s'):
-                key_singular = key[:-1]
-                if key_singular in d3:
-                    val_plural = d3[key]
-                    val_singular = d3[key_singular]
-                    d3[key_singular] = val_singular + val_plural
-                    del d3[key]
+            all_suffixes = {'ing', 'er', 'ed', 's'}
+            for suffix in all_suffixes:
+                suffix_len = len(suffix)
+                if key.endswith(suffix) and len(key) >= (suffix_len + min_root_length):
+                    key_root = key[:-len(suffix)]
+                    if key_root in d3:
+                        _merge_keys(key_root, key)
+                    else:
+                        for other_suffix in all_suffixes:
+                            if other_suffix != suffix:
+                                other_key = key_root + other_suffix
+                                if key in d3 and other_key in d3:
+                                    _merge_keys(other_key, key)
 
         words = sorted(d3.items(), key=item1, reverse=True)
         words = words[:self.max_words]
