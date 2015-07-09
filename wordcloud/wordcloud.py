@@ -353,25 +353,24 @@ class WordCloud(object):
             d3[first] = sum(d2.values())
 
         # merge plurals into the singular count (simple cases only)
-        def _merge_keys(kept_key, merged_key):
+        def _merge_d3_keys(kept_key, merged_key):
             d3[kept_key] += d3[merged_key]
             del d3[merged_key]
 
         min_root_length = 3
         for key in list(d3.keys()):
-            all_suffixes = {'ing', 'er', 'ed', 's'}
+            all_suffixes = {'s', 'ed', 'ing', 'ly', 'er', 'es'}
             for suffix in all_suffixes:
                 suffix_len = len(suffix)
                 if key.endswith(suffix) and len(key) >= (suffix_len + min_root_length):
                     key_root = key[:-len(suffix)]
                     if key_root in d3:
-                        _merge_keys(key_root, key)
+                        _merge_d3_keys(key_root, key)
                     else:
-                        for other_suffix in all_suffixes:
-                            if other_suffix != suffix:
-                                other_key = key_root + other_suffix
-                                if key in d3 and other_key in d3:
-                                    _merge_keys(other_key, key)
+                        for other_suffix in (all_suffixes - set(suffix)):
+                            other_key = key_root + other_suffix
+                            if other_key in d3 and key in d3:
+                                _merge_d3_keys(other_key, key)
 
         words = sorted(d3.items(), key=item1, reverse=True)
         words = words[:self.max_words]
