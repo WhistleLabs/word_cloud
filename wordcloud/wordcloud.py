@@ -357,14 +357,18 @@ class WordCloud(object):
             d3[first] = sum(d2.values())
 
         # merge two keys together
-        def _merge_d3_keys(kept_key, merged_key, verbose=False):
+        def _merge_d3_keys(kept_key, merged_key, merge_larger=True, verbose=False):
             merged = False
             if kept_key in d3:
-                if verbose:
-                    print 'Merging {} into {}'.format(merged_key, kept_key)
-                d3[kept_key] += d3[merged_key]
-                del d3[merged_key]
-                merged = True
+                merged_value = d3[merged_key]
+                kept_value = d3[kept_key]
+                if merge_larger or kept_value >= merged_value:
+                    if verbose:
+                        print 'Merging {0} ({1}) into {2} ({3})'.format(merged_key, merged_value,
+                                                                        kept_key, kept_value)
+                    d3[kept_key] += merged_value
+                    del d3[merged_key]
+                    merged = True
 
             return merged
 
@@ -379,7 +383,7 @@ class WordCloud(object):
 
                     for other_suffix in self.suffixes.difference({suffix}):
                         other_key = key_root + other_suffix
-                        if _merge_d3_keys(other_key, key):
+                        if _merge_d3_keys(other_key, key, merge_larger=False):
                             break
 
         words = sorted(d3.items(), key=item1, reverse=True)
